@@ -455,3 +455,10 @@ class AspectRatioBasedSampler(Sampler):
 
         # divide into groups, one group = one batch
         return [[order[x % len(order)] for x in range(i, i + self.batch_size)] for i in range(0, len(order), self.batch_size)]
+
+
+def test_debug():
+    dataset = CocoDataset('/datasets_master/COCO')
+
+    stuff = dataset[0]
+    pass
