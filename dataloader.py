@@ -1,23 +1,20 @@
 from __future__ import print_function, division
-import sys
-import os
-import torch
-import numpy as np
-import random
+
 import csv
+import os
+import random
+import sys
 
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from torch.utils.data.sampler import Sampler
-
-from pycocotools.coco import COCO
-
+import numpy as np
+import skimage
+import skimage.color
 import skimage.io
 import skimage.transform
-import skimage.color
-import skimage
-
+import torch
 from PIL import Image
+from pycocotools.coco import COCO
+from torch.utils.data import Dataset
+from torch.utils.data.sampler import Sampler
 
 
 class CocoDataset(Dataset):

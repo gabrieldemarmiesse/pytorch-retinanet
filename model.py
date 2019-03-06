@@ -1,12 +1,14 @@
-import torch.nn as nn
-import torch
 import math
-import time
+
+import torch
+import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
-from utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
-from anchors import Anchors
+
 import losses
+from anchors import Anchors
 from lib.nms.pth_nms import pth_nms
+from utils import BasicBlock, Bottleneck, BBoxTransform, ClipBoxes
+
 
 def nms(dets, thresh):
     "Dispatch to either CPU or GPU NMS implementations.\
