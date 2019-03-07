@@ -461,4 +461,10 @@ def test_debug():
     dataset = CocoDataset('/datasets_master/COCO')
 
     stuff = dataset[0]
+
+    from torchvision import transforms
+    dataset = CocoDataset('/datasets_master/COCO', transform=transforms.Compose(
+                                        [Normalizer(), Augmenter(), Resizer()]))
+
+    dodo = dataset[0]
     pass

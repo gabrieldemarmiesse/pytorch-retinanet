@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 import coco_eval
-import csv_eval
 import model
 from dataloader import CocoDataset, CSVDataset, collater, Resizer, \
     AspectRatioBasedSampler, Augmenter, Normalizer
@@ -82,12 +81,6 @@ def main(args=None):
     sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=False)
     dataloader_train = DataLoader(dataset_train, num_workers=3, collate_fn=collater,
                                   batch_sampler=sampler)
-
-    if dataset_val is not None:
-        sampler_val = AspectRatioBasedSampler(dataset_val, batch_size=1,
-                                              drop_last=False)
-        dataloader_val = DataLoader(dataset_val, num_workers=3, collate_fn=collater,
-                                    batch_sampler=sampler_val)
 
     # Create the model
     if parser.depth == 18:
@@ -178,12 +171,6 @@ def main(args=None):
             print('Evaluating dataset')
 
             coco_eval.evaluate_coco(dataset_val, retinanet)
-
-        elif parser.dataset == 'csv' and parser.csv_val is not None:
-
-            print('Evaluating dataset')
-
-            mAP = csv_eval.evaluate(dataset_val, retinanet)
 
         scheduler.step(np.mean(epoch_loss))
 
