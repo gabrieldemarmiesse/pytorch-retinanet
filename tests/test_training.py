@@ -1,32 +1,26 @@
-from torch.utils.data import DataLoader
-from torchvision import transforms
-import losses
-import model
-from dataloader import CocoDataset, collater, Resizer, \
-    AspectRatioBasedSampler, Augmenter, Normalizer
+from retinanet.model import resnet18
+from retinanet.losses import FocalLoss
+import torch
+import numpy as np
 
 
 def test_training():
-    dataset_train = CocoDataset('/datasets_master/COCO', set_name='train2017',
-                                transform=transforms.Compose(
-                                    [Normalizer(), Augmenter(), Resizer()]))
-    retinanet = model.resnet18(num_classes=dataset_train.num_classes(),
-                               pretrained=True)
-    retinanet.cuda()
-    retinanet.eval()
-    sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=False)
-    dataloader_train = DataLoader(dataset_train, num_workers=3, collate_fn=collater,
-                                  batch_sampler=sampler)
+    fake_img_batch = np.random.uniform(0, 255, size=(2, 3, 512, 512)).astype(np.float32)
+    fake_bb_batch = np.random.uniform(0, 400, (2, 4, 4))
+    fake_classes_batch = np.random.uniform(0, 10, (2, 4, 1)).astype(np.uint8)
+    fake_targets = np.concatenate((fake_bb_batch, fake_classes_batch), axis=-1).astype(np.float32)
+    net = resnet18(num_classes=15)
+    net.cuda()
+    net.eval()
 
-    for data in dataloader_train:
-        (classification,  # for focal loss
-         regression,      # for focal loss
-         anchors,         # for focal loss
-         nms_scores,      # for inference
-         nms_class,       # for inference
-         transformed_anchors) = retinanet(data['img'].cuda())
-        break
-    floss = losses.FocalLoss()
+    (classification,  # for focal loss
+     regression,  # for focal loss
+     anchors,  # for focal loss
+     nms_scores,  # for inference
+     nms_class,  # for inference
+     transformed_anchors) = net(torch.from_numpy(fake_img_batch).cuda())
+    floss = FocalLoss()
 
-    my_loss = floss(classification, regression, anchors, data['annot'].cuda())
+    targets = torch.from_numpy(fake_targets).cuda()
+    my_loss = floss(classification, regression, anchors, targets)
     pass
