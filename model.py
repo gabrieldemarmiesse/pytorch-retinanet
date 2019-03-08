@@ -189,9 +189,6 @@ class ResNet(nn.Module):
         self.regressBoxes = BBoxTransform()
 
         self.clipBoxes = ClipBoxes()
-        
-        self.focalLoss = losses.FocalLoss()
-                
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -235,11 +232,8 @@ class ResNet(nn.Module):
 
     def forward(self, inputs):
 
-        if self.training:
-            img_batch, annotations = inputs
-        else:
-            img_batch = inputs
-            
+        img_batch = inputs
+
         x = self.conv1(img_batch)
         x = self.bn1(x)
         x = self.relu(x)
@@ -258,30 +252,37 @@ class ResNet(nn.Module):
 
         anchors = self.anchors(img_batch)
 
-        if self.training:
-            return self.focalLoss(classification, regression, anchors, annotations)
-        else:
-            transformed_anchors = self.regressBoxes(anchors, regression)
-            transformed_anchors = self.clipBoxes(transformed_anchors, img_batch)
+        transformed_anchors = self.regressBoxes(anchors, regression)
+        transformed_anchors = self.clipBoxes(transformed_anchors, img_batch)
 
-            scores = torch.max(classification, dim=2, keepdim=True)[0]
+        scores = torch.max(classification, dim=2, keepdim=True)[0]
 
-            scores_over_thresh = (scores>0.05)[0, :, 0]
+        scores_over_thresh = (scores > 0.05)[0, :, 0]
 
-            if scores_over_thresh.sum() == 0:
-                # no boxes to NMS, just return
-                return [torch.zeros(0), torch.zeros(0), torch.zeros(0, 4)]
+        if scores_over_thresh.sum() == 0:
+            # no boxes to NMS, just return
+            return [classification,   # for focal loss
+                    regression,       # for focal loss
+                    anchors,          # for focal loss
+                    torch.zeros(0),
+                    torch.zeros(0),
+                    torch.zeros(0, 4)]
 
-            classification = classification[:, scores_over_thresh, :]
-            transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
-            scores = scores[:, scores_over_thresh, :]
+        final_classification = classification[:, scores_over_thresh, :]
+        transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
+        scores = scores[:, scores_over_thresh, :]
 
-            anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
+        anchors_nms_idx = nms(torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
 
-            nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
+        nms_scores, nms_class = final_classification[0, anchors_nms_idx, :].max(dim=1)
 
-            result = [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
-            return result
+        result = [classification,   # for focal loss
+                  regression,       # for focal loss
+                  anchors,          # for focal loss
+                  nms_scores,       # for inference
+                  nms_class,        # for inference
+                  transformed_anchors[0, anchors_nms_idx, :]]  # for inference
+        return result
 
 
 def resnet18(num_classes, pretrained=False, **kwargs):
