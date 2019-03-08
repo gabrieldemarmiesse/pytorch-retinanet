@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from valeodata import download
+import losses
 import model
 from dataloader import CocoDataset, collater, Resizer, \
     AspectRatioBasedSampler, Augmenter, Normalizer
@@ -20,9 +20,13 @@ def test_training():
 
     for data in dataloader_train:
         (classification,  # for focal loss
-         regression,  # for focal loss
-         anchors,  # for focal loss
-         nms_scores,  # for inference
-         nms_class,  # for inference
+         regression,      # for focal loss
+         anchors,         # for focal loss
+         nms_scores,      # for inference
+         nms_class,       # for inference
          transformed_anchors) = retinanet(data['img'].cuda())
         break
+    floss = losses.FocalLoss()
+
+    my_loss = floss(classification, regression, anchors, data['annot'].cuda())
+    pass
