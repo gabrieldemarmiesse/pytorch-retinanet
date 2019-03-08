@@ -280,8 +280,8 @@ class ResNet(nn.Module):
 
             nms_scores, nms_class = classification[0, anchors_nms_idx, :].max(dim=1)
 
-            return [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
-
+            result = [nms_scores, nms_class, transformed_anchors[0, anchors_nms_idx, :]]
+            return result
 
 
 def resnet18(num_classes, pretrained=False, **kwargs):

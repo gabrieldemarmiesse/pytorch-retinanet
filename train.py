@@ -1,5 +1,4 @@
 import argparse
-import argparse
 import collections
 
 import numpy as np
