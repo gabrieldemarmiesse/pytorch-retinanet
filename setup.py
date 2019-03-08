@@ -13,7 +13,7 @@ CUDA_ARCH = ('-gencode arch=compute_30,code=sm_30 '
              '-gencode arch=compute_61,code=sm_61')
 
 project_dir = pathlib.Path(__file__).resolve().parent
-finished_file = project_dir / 'finished_install.txt'
+finished_file = project_dir / 'finished_compiling.txt'
 src = project_dir / 'retinanet/lib/nms/src'
 
 if not finished_file.exists():
