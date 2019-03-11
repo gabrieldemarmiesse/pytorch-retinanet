@@ -18,7 +18,7 @@ def test_training():
      anchors,  # for focal loss
      nms_scores,  # for inference
      nms_class,  # for inference
-     transformed_anchors # for inference
+     transformed_anchors  # for inference
      ) = net(torch.from_numpy(fake_img_batch).cuda())
     floss = FocalLoss()
 
