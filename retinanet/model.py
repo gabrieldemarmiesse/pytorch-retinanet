@@ -124,7 +124,7 @@ class RegressionModel(nn.Module):
 
 class ClassificationModel(nn.Module):
     def __init__(self, num_features_in, num_anchors=9, num_classes=80, prior=0.01,
-                 feature_size=256):
+                 feature_size=256, return_class_maps=False):
         super(ClassificationModel, self).__init__()
 
         self.num_classes = num_classes
@@ -146,6 +146,7 @@ class ClassificationModel(nn.Module):
         self.output = nn.Conv2d(feature_size, num_anchors * num_classes,
                                 kernel_size=3, padding=1)
         self.output_act = nn.Sigmoid()
+        self.return_class_maps = return_class_maps
 
     def forward(self, x):
         out = self.conv1(x)
@@ -171,12 +172,16 @@ class ClassificationModel(nn.Module):
         out2 = out1.view(batch_size, width, height, self.num_anchors,
                          self.num_classes)
 
-        return out2.contiguous().view(x.shape[0], -1, self.num_classes)
+        out = out2.contiguous().view(x.shape[0], -1, self.num_classes)
+        if self.return_class_maps:
+            return self.output_act(out), out
+        else:
+            return self.output_act(out)
 
 
 class ResNet(nn.Module):
 
-    def __init__(self, num_classes, block, layers):
+    def __init__(self, num_classes, block, layers, return_class_maps=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -200,7 +205,8 @@ class ResNet(nn.Module):
         self.fpn = PyramidFeatures(fpn_sizes[0], fpn_sizes[1], fpn_sizes[2])
 
         self.regressionModel = RegressionModel(256)
-        self.classificationModel = ClassificationModel(256, num_classes=num_classes)
+        self.classificationModel = ClassificationModel(256, num_classes=num_classes,
+                                                       return_class_maps=return_class_maps)
 
         self.anchors = Anchors()
 
@@ -225,6 +231,7 @@ class ResNet(nn.Module):
         self.regressionModel.output.bias.data.fill_(0)
 
         self.freeze_bn()
+        self.return_class_maps = return_class_maps
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -270,6 +277,10 @@ class ResNet(nn.Module):
 
         list_classification = [self.classificationModel(feature) for feature in features]
 
+        if self.return_class_maps:
+            list_class_maps = [x[1] for x in list_classification]
+            list_classification = [x[0] for x in list_classification]
+
         classification = torch.cat(list_classification, dim=1)
 
         anchors = self.anchors(img_batch)
@@ -306,6 +317,8 @@ class ResNet(nn.Module):
                   nms_scores,  # for inference
                   nms_class,  # for inference
                   transformed_anchors[0, anchors_nms_idx, :]]  # for inference
+        if self.return_class_maps:
+            result.append(list_class_maps)
         return result
 
 
