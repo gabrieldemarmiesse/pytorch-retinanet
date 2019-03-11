@@ -2,10 +2,12 @@ from retinanet.model import resnet18
 from retinanet.losses import FocalLoss
 import torch
 import numpy as np
+import pytest
 
 
-def test_training():
-    fake_img_batch = np.random.uniform(0, 255, size=(2, 3, 512, 512)).astype(np.float32)
+@pytest.mark.parametrize('input_size', list(range(250, 350)))
+def test_training(input_size):
+    fake_img_batch = np.random.uniform(0, 255, size=(2, 3, input_size, input_size)).astype(np.float32)
     fake_bb_batch = np.random.uniform(0, 400, (2, 4, 4))
     fake_classes_batch = np.random.uniform(0, 10, (2, 4, 1)).astype(np.uint8)
     fake_targets = np.concatenate((fake_bb_batch, fake_classes_batch), axis=-1).astype(np.float32)
