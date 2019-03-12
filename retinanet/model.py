@@ -174,7 +174,7 @@ class ClassificationModel(nn.Module):
 
         out = out2.contiguous().view(x.shape[0], -1, self.num_classes)
         if self.return_class_maps:
-            return self.output_act(out), out
+            return self.output_act(out), out2
         else:
             return self.output_act(out)
 
