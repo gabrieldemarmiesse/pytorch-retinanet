@@ -181,7 +181,8 @@ class ClassificationModel(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, num_classes, block, layers, return_class_maps=False):
+    def __init__(self, num_classes, block, layers, return_class_maps=False,
+                 use_threshold=True):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -232,6 +233,7 @@ class ResNet(nn.Module):
 
         self.freeze_bn()
         self.return_class_maps = return_class_maps
+        self.use_threshold = use_threshold
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -290,33 +292,28 @@ class ResNet(nn.Module):
 
         scores = torch.max(classification, dim=2, keepdim=True)[0]
 
-        scores_over_thresh = (scores > 0.05)[0, :, 0]
+        if self.use_threshold:
+            scores_over_thresh = (scores > 0.05)[0, :, 0]
 
-        if scores_over_thresh.sum() == 0:
-            # no boxes to NMS, just return
-            return [classification,  # for focal loss
-                    regression,  # for focal loss
-                    anchors,  # for focal loss
-                    torch.zeros(0),
-                    torch.zeros(0),
-                    torch.zeros(0, 4)]
-
-        final_classification = classification[:, scores_over_thresh, :]
-        transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
-        scores = scores[:, scores_over_thresh, :]
+            final_classification = classification[:, scores_over_thresh, :]
+            transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
+            scores = scores[:, scores_over_thresh, :]
+        else:
+            final_classification = classification
 
         anchors_nms_idx = nms(
             torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
 
         nms_scores, nms_class = final_classification[0, anchors_nms_idx, :].max(
             dim=1)
+        nms_anchors = transformed_anchors[0, anchors_nms_idx, :]
 
         result = [classification,  # for focal loss
                   regression,  # for focal loss
                   anchors,  # for focal loss
                   nms_scores,  # for inference
                   nms_class,  # for inference
-                  transformed_anchors[0, anchors_nms_idx, :]]  # for inference
+                  nms_anchors]  # for inference
         if self.return_class_maps:
             result.append(list_class_maps)
         return result
