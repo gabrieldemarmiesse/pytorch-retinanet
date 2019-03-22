@@ -181,8 +181,7 @@ class ClassificationModel(nn.Module):
 
 class ResNet(nn.Module):
 
-    def __init__(self, num_classes, block, layers, return_class_maps=False,
-                 use_threshold=True):
+    def __init__(self, num_classes, block, layers, return_class_maps=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -233,7 +232,6 @@ class ResNet(nn.Module):
 
         self.freeze_bn()
         self.return_class_maps = return_class_maps
-        self.use_threshold = use_threshold
 
     def _make_layer(self, block, planes, blocks, stride=1):
         downsample = None
@@ -292,14 +290,11 @@ class ResNet(nn.Module):
 
         scores = torch.max(classification, dim=2, keepdim=True)[0]
 
-        if self.use_threshold:
-            scores_over_thresh = (scores > 0.05)[0, :, 0]
+        scores_over_thresh = (scores > 0.05)[0, :, 0]
 
-            final_classification = classification[:, scores_over_thresh, :]
-            transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
-            scores = scores[:, scores_over_thresh, :]
-        else:
-            final_classification = classification
+        final_classification = classification[:, scores_over_thresh, :]
+        transformed_anchors = transformed_anchors[:, scores_over_thresh, :]
+        scores = scores[:, scores_over_thresh, :]
 
         anchors_nms_idx = nms(
             torch.cat([transformed_anchors, scores], dim=2)[0, :, :], 0.5)
