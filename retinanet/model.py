@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
@@ -184,6 +185,12 @@ class ResNet(nn.Module):
     def __init__(self, num_classes, block, layers, return_class_maps=False):
         self.inplanes = 64
         super(ResNet, self).__init__()
+        # taken from the dataloader
+        # This should have a flag to be turned off.
+        mean = np.reshape([0.485, 0.456, 0.406], (1, 3, 1, 1)) * 255
+        self.mean = nn.Parameter(torch.Tensor(mean), requires_grad=False)
+        std = np.reshape([0.229, 0.224, 0.225], (1, 3, 1, 1)) * 255
+        self.std = nn.Parameter(torch.Tensor(std), requires_grad=False)
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
@@ -258,7 +265,7 @@ class ResNet(nn.Module):
 
     def forward(self, inputs):
 
-        img_batch = inputs
+        img_batch = (inputs - self.mean) / self.std
 
         x = self.conv1(img_batch)
         x = self.bn1(x)
